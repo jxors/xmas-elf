@@ -131,6 +131,7 @@ impl<'a> SectionHeader<'a> {
                 array_data!(FnArray32, FnArray64)
             }
             ShType::Rela => array_data!(Rela32, Rela64),
+            ShType::Relr => array_data!(Relr32, Relr64),
             ShType::Rel => array_data!(Rel32, Rel64),
             ShType::Dynamic => array_data!(Dynamic32, Dynamic64),
             ShType::Group => {
@@ -280,6 +281,7 @@ pub enum ShType {
     SymTab,
     StrTab,
     Rela,
+    Relr,
     Hash,
     Dynamic,
     Note,
@@ -318,6 +320,7 @@ impl ShType_ {
             16 => Ok(ShType::PreInitArray),
             17 => Ok(ShType::Group),
             18 => Ok(ShType::SymTabShIndex),
+            19 => Ok(ShType::Relr),
             st if (SHT_LOOS..=SHT_HIOS).contains(&st) => Ok(ShType::OsSpecific(st)),
             st if (SHT_LOPROC..=SHT_HIPROC).contains(&st) => Ok(ShType::ProcessorSpecific(st)),
             st if (SHT_LOUSER..=SHT_HIUSER).contains(&st) => Ok(ShType::User(st)),
@@ -350,6 +353,8 @@ pub enum SectionData<'a> {
     Note64(&'a NoteHeader, &'a [u8]),
     Rela32(&'a [Rela<P32>]),
     Rela64(&'a [Rela<P64>]),
+    Relr32(&'a [Relr<P32>]),
+    Relr64(&'a [Relr<P64>]),
     Rel32(&'a [Rel<P32>]),
     Rel64(&'a [Rel<P64>]),
     Dynamic32(&'a [Dynamic<P32>]),
@@ -466,6 +471,12 @@ pub const GRP_MASKPROC: u64 = 0xf0000000;
 
 #[derive(Debug)]
 #[repr(C)]
+pub struct Relr<P> {
+    value: P,
+}
+
+#[derive(Debug)]
+#[repr(C)]
 pub struct Rela<P> {
     offset: P,
     info: P,
@@ -479,6 +490,7 @@ pub struct Rel<P> {
     info: P,
 }
 
+unsafe impl<P> Pod for Relr<P> {}
 unsafe impl<P> Pod for Rela<P> {}
 unsafe impl<P> Pod for Rel<P> {}
 
@@ -530,6 +542,16 @@ impl Rel<P64> {
     }
     pub fn get_type(&self) -> u32 {
         (self.info & 0xffffffff) as u32
+    }
+}
+impl Relr<P32> {
+    pub fn get_value(&self) -> u32 {
+        self.value
+    }
+}
+impl Relr<P64> {
+    pub fn get_value(&self) -> u64 {
+        self.value
     }
 }
 
